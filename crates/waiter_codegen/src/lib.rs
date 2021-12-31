@@ -1,5 +1,4 @@
-use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2};
+use proc_macro2::TokenStream ;
 use quote::ToTokens;
 use syn::*;
 use component::{generate_component_for_struct, generate_component_for_impl};
@@ -13,16 +12,14 @@ mod component;
 mod provider;
 mod attr_parser;
 
-#[proc_macro_attribute]
 pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     component(_attr, item)
 }
 
-#[proc_macro_attribute]
 pub fn component(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut res: TokenStream = remove_attrs(item.clone());
 
-    let comp = syn::parse::<ItemStruct>(item.clone());
+    let comp = syn::parse2::<ItemStruct>(item.clone());
     if comp.is_ok() {
         let comp = comp.unwrap();
         res.extend(unwrap(generate_component_for_struct(comp.clone())));
@@ -30,13 +27,12 @@ pub fn component(_attr: TokenStream, item: TokenStream) -> TokenStream {
         return res;
     }
 
-    let impl_block = syn::parse::<ItemImpl>(item.clone())
+    let impl_block = syn::parse2::<ItemImpl>(item.clone())
         .expect("#[component]/#[module] cant be used only on struct or impls");
     res.extend(unwrap(generate_component_for_impl(impl_block.clone())));
     return res;
 }
 
-#[proc_macro_attribute]
 pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
     let provides_attr = match parse_provides_attr(attr) {
         Ok(attr) => attr,
@@ -45,25 +41,27 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let mut res = remove_attrs(item.clone());
 
-    let impl_block = syn::parse::<ItemImpl>(item.clone());
+    let impl_block = syn::parse2::<ItemImpl>(item.clone());
     if impl_block.is_ok() {
         res.extend(generate_interface_provider_impl(provides_attr, impl_block.unwrap().clone()));
         return res;
     }
 
-    let fn_block = syn::parse::<ItemFn>(item.clone())
-        .expect("#[provides] must be used only on impl blocks and factory functions");
+    let fn_block = syn::parse2::<ItemFn>(item.clone())
+        .expect("#[factory] must be used only on impl blocks and factory functions");
     res.extend(unwrap(generate_component_provider_impl_fn(
         provides_attr,
         fn_block.clone(),
-        TokenStream2::new()
+        TokenStream::new()
     )));
     return res;
 }
 
-#[proc_macro_attribute]
 pub fn wrapper(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let wrapper = parse_macro_input!(item as ItemStruct);
+    let wrapper = match syn::parse2::<ItemStruct>(item) {
+		Ok(w) => w,
+		Err(e) => return e.to_compile_error()
+	};
 
     let type_to_wrap = if let Fields::Unnamed(fields) = &wrapper.fields {
         let field = fields.unnamed.first();
@@ -99,10 +97,10 @@ pub fn wrapper(_attr: TokenStream, item: TokenStream) -> TokenStream {
 fn remove_attrs(item: TokenStream) -> TokenStream {
     fn attr_filter(attr: &Attribute) -> bool {
         let attr_name = attr.path.to_token_stream().to_string();
-        attr_name.as_str() != "prop" && attr_name.as_str() != "provides"
+        attr_name.as_str() != "prop" && attr_name.as_str() != "factory" && attr_name.as_str() != "interface"
     }
 
-    let item = syn::parse::<Item>(item).unwrap();
+    let item = syn::parse2::<Item>(item).unwrap();
 
     let item = match item {
         Item::Fn(mut fn_) => {

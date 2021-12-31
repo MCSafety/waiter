@@ -1,4 +1,4 @@
-extern crate config;
+/* extern crate config;
 extern crate serde;
 extern crate waiter_di;
 
@@ -25,11 +25,11 @@ struct SomeComp {
     #[prop("i32_prop")] prop: i32,
     interface: Rc<dyn Interface>
 }
-
+*/
 fn main() {
-    let mut container = Container::<profiles::Default>::new();
+    /* let mut container = Container::<profiles::Default>::new();
 
     let component = Provider::<SomeComp>::get(&mut container);
 
-    component.interface.demo();
+    component.interface.demo(); */
 }

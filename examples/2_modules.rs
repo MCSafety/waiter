@@ -1,4 +1,4 @@
-extern crate waiter_di;
+/* extern crate waiter_di;
 extern crate config;
 extern crate serde;
 
@@ -44,13 +44,13 @@ struct UserModule {
 struct RootModule {
     user_module: UserModule
 }
-
+*/
 fn main() {
-    let mut container = Container::<profiles::Dev>::new();
+/*    let mut container = Container::<profiles::Dev>::new();
 
     let mut user_repository = Provider::<dyn UserRepository>::create(&mut container);
 
     user_repository.save(12, "John".to_string());
 
-    println!("Found user with id = 12: {:?}", user_repository.find(12));
+    println!("Found user with id = 12: {:?}", user_repository.find(12)); */
 }

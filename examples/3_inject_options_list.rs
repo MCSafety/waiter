@@ -1,4 +1,4 @@
-extern crate waiter_di;
+/* extern crate waiter_di;
 extern crate config;
 extern crate serde;
 
@@ -88,10 +88,10 @@ impl Interface2 for Comp {
         println!("Interface 2");
     }
 }
-
+*/
 
 fn main() {
-    let mut container = Container::<profiles::Default>::new();
+/*    let mut container = Container::<profiles::Default>::new();
 
     let comp = Provider::<Comp>::get_ref(&mut container);
     comp.comp();
@@ -113,4 +113,5 @@ fn main() {
     println!("Using profile: {}", APP_PROFILE.as_str());
     let comp = inject!(Comp: profiles::Default, profiles::Dev);
     comp.comp();
+	*/
 }

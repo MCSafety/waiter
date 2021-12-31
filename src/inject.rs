@@ -1,13 +1,13 @@
-#[macro_export]
+/* #[macro_export]
 macro_rules! inject {
     ($comp:path: $($profile:path),*) => {
         {
             $(
-                if profile_name::<$profile>().eq(&waiter_di::APP_PROFILE.as_str()) {
-                    waiter_di::Provider::<$comp>::create(&mut waiter_di::Container::<$profile>::new())
+                if profile_name::<$profile>().eq(&ambient::APP_PROFILE.as_str()) {
+                    ambient::Provider::<$comp>::create(&mut ambient::Container::<$profile>::new())
                 } else
             )*
-            { waiter_di::Provider::<$comp>::create(&mut waiter_di::Container::<waiter_di::profiles::Default>::new()) }
+            { ambient::Provider::<$comp>::create(&mut ambient::Container::<ambient::profiles::Default>::new()) }
         }
     }
 }
@@ -24,3 +24,4 @@ macro_rules! wrap {
         }
     }
 }
+*/

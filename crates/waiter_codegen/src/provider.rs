@@ -1,5 +1,4 @@
-use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2};
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 
 use syn::{GenericParam, ItemImpl, ItemStruct, Path, Type, ItemFn, ReturnType, Error};
@@ -32,7 +31,7 @@ pub(crate) fn generate_component_provider_impl_struct(component: ItemStruct) -> 
 pub(crate) fn generate_component_provider_impl_fn(
     provides: ProvidesAttr,
     factory: ItemFn,
-    force_type: TokenStream2
+    force_type: TokenStream
 ) -> Result<TokenStream, Error> {
     let comp_name = if force_type.is_empty() {
         let ret_value = if let ReturnType::Type(_, type_) = &factory.sig.output {
@@ -90,11 +89,11 @@ pub(crate) fn generate_component_provider_impl_fn(
 }
 
 pub fn generate_component_provider_impl(
-    comp_name: TokenStream2,
+    comp_name: TokenStream,
     comp_generics: Vec<&GenericParam>,
     profiles: Vec<Path>,
-    create_component_code: TokenStream2,
-    inject_deferred_code: TokenStream2
+    create_component_code: TokenStream,
+    inject_deferred_code: TokenStream
 ) -> TokenStream {
     let (profiles, provider_generics) = if profiles.is_empty() {
         let generic_profile = quote::quote! { PROFILE };
@@ -114,12 +113,12 @@ pub fn generate_component_provider_impl(
     };
 
     let result = quote::quote! {#(
-        impl #provider_generics waiter_di::Provider<#comp_name> for waiter_di::Container<#profiles> {
+        impl #provider_generics ambient::Provider<#comp_name> for ambient::Container<#profiles> {
             type Impl = #comp_name;
-            fn get(&mut self) -> waiter_di::Wrc<Self::Impl> {
+            fn get(&mut self) -> ambient::Wrc<Self::Impl> {
                 let type_id = std::any::TypeId::of::<#comp_name>();
                 if !self.components.contains_key(&type_id) {
-                    let component = waiter_di::Wrc::new(#create_component_code);
+                    let component = ambient::Wrc::new(#create_component_code);
                     self.components.insert(type_id, component.clone());
                     #inject_deferred_code
                 }
@@ -146,7 +145,7 @@ pub(crate) fn generate_interface_provider_impl(provides: ProvidesAttr, impl_bloc
         Some((_, interface, _)) => interface,
         None => return TokenStream::from(Error::new(
             impl_block.span(),
-            "#[provides] can be used only on impl blocks for traits"
+            "#[interface] can be used only on impl blocks for traits"
         ).to_compile_error())
     };
 
@@ -158,22 +157,22 @@ pub(crate) fn generate_interface_provider_impl(provides: ProvidesAttr, impl_bloc
 
     let provider_body = quote::quote! {{
         type Impl = #comp_name;
-        fn get(&mut self) -> waiter_di::Wrc<Self::Impl> {
-            waiter_di::Provider::<#comp_name>::get(self)
+        fn get(&mut self) -> ambient::Wrc<Self::Impl> {
+            ambient::Provider::<#comp_name>::get(self)
         }
         fn create(&mut self) -> Self::Impl {
-            waiter_di::Provider::<#comp_name>::create(self)
+            ambient::Provider::<#comp_name>::create(self)
         }
     }};
 
     let profiles = provides.profiles;
     let result = if profiles.is_empty() {
         quote::quote! {
-            impl<P> waiter_di::Provider<dyn #interface> for waiter_di::Container<P> #provider_body
+            impl<P> ambient::Provider<dyn #interface> for ambient::Container<P> #provider_body
         }
     } else {
         quote::quote! {
-            #(impl waiter_di::Provider<dyn #interface> for waiter_di::Container<#profiles> #provider_body)*
+            #(impl ambient::Provider<dyn #interface> for ambient::Container<#profiles> #provider_body)*
         }
     };
 

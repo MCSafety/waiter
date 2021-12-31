@@ -4,8 +4,7 @@ use syn::parse::Parser;
 use syn::token::{Comma};
 use syn::{LitStr, ExprAssign};
 use syn::parse_macro_input::parse;
-use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2};
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 
 pub(crate) struct ProvidesAttr {
@@ -13,7 +12,7 @@ pub(crate) struct ProvidesAttr {
 }
 
 pub(crate) fn parse_provides_attr(attr: TokenStream) -> Result<ProvidesAttr, Error> {
-    let profiles_syn = <Punctuated<Path, Comma>>::parse_terminated.parse(attr)?;
+    let profiles_syn = <Punctuated<Path, Comma>>::parse_terminated.parse2(attr)?;
 
     let profiles: Vec<Path> = profiles_syn
         .iter()
@@ -27,7 +26,7 @@ pub(crate) fn parse_provides_attr(attr: TokenStream) -> Result<ProvidesAttr, Err
 #[derive(Clone)]
 pub(crate) struct PropAttr {
     pub(crate) name: Option<String>,
-    pub(crate) default_value: Option<TokenStream2>
+    pub(crate) default_value: Option<TokenStream>
 }
 
 pub(crate) fn parse_prop_attr(attr: &Attribute) -> Result<PropAttr, Error> {

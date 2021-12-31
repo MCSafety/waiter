@@ -1,5 +1,4 @@
-use proc_macro::{TokenStream};
-use proc_macro2::{TokenStream as TokenStream2, Span};
+use proc_macro2::{TokenStream, Span};
 use quote;
 use quote::ToTokens;
 use syn::{Ident, ItemStruct, Fields, Field, Type, Error, PathArguments, GenericArgument, ItemImpl, ImplItem, Expr, ItemFn};
@@ -18,7 +17,7 @@ pub(crate) fn generate_component_for_impl(comp_impl: ItemImpl) -> Result<TokenSt
         match item {
             ImplItem::Method(method) => {
                 let provides_attr = method.attrs.iter()
-                    .find(|attr| attr.path.to_token_stream().to_string() == "provides".to_string());
+                    .find(|attr| attr.path.to_token_stream().to_string() == "factory".to_string());
 
                 if provides_attr.is_some() {
                     let provides_attr = provides_attr.unwrap();
@@ -46,7 +45,7 @@ pub(crate) fn generate_component_for_impl(comp_impl: ItemImpl) -> Result<TokenSt
             _ => {}
         }
     }
-    Err(Error::new(comp_impl.span(), "Constructor with #[provides] attribute is not found"))
+    Err(Error::new(comp_impl.span(), "Constructor with #[factory] attribute is not found"))
 }
 
 pub(crate) fn generate_component_for_struct(component: ItemStruct) -> Result<TokenStream, Error> {
@@ -79,12 +78,12 @@ pub(crate) fn generate_component_for_struct(component: ItemStruct) -> Result<Tok
 
 
     let result = quote::quote! {
-        impl #comp_generics waiter_di::Component for #comp_name #comp_generics {
-            fn __waiter_create<P>(container: &mut waiter_di::Container<P>) -> Self {
+        impl #comp_generics ambient::Component for #comp_name #comp_generics {
+            fn __waiter_create<P>(container: &mut ambient::Container<P>) -> Self {
                 #dependencies_code
                 return #comp_name #factory_code;
             }
-            fn __waiter_inject_deferred<P>(container: &mut waiter_di::Container<P>, component: &Self) {
+            fn __waiter_inject_deferred<P>(container: &mut ambient::Container<P>, component: &Self) {
                 #deferred_dependencies_code
                 #deferred_inject_code
             }
@@ -94,7 +93,7 @@ pub(crate) fn generate_component_for_struct(component: ItemStruct) -> Result<Tok
     return Ok(result.into());
 }
 
-pub(crate) fn generate_inject_dependencies_tuple(dep_number: usize) -> TokenStream2 {
+pub(crate) fn generate_inject_dependencies_tuple(dep_number: usize) -> TokenStream {
     let dependencies: Vec<Ident> = (0..dep_number)
         .map(|i| Ident::new(format!("dep_{}", i).as_str(), Span::call_site()))
         .collect();
@@ -104,7 +103,7 @@ pub(crate) fn generate_inject_dependencies_tuple(dep_number: usize) -> TokenStre
     };
 }
 
-fn generate_inject_dependencies_named(fields: Vec<&Field>) -> TokenStream2 {
+fn generate_inject_dependencies_named(fields: Vec<&Field>) -> TokenStream {
     let dependencies: Vec<Ident> = (0..fields.len())
         .map(|i| Ident::new(format!("dep_{}", i).as_str(), Span::call_site()))
         .collect();
@@ -118,8 +117,8 @@ fn generate_inject_dependencies_named(fields: Vec<&Field>) -> TokenStream2 {
     };
 }
 
-fn generate_inject_deferred(fields: Vec<&Field>, is_tuple: bool) -> TokenStream2 {
-    let dependencies_inject: Vec<TokenStream2> = fields.iter()
+fn generate_inject_deferred(fields: Vec<&Field>, is_tuple: bool) -> TokenStream {
+    let dependencies_inject: Vec<TokenStream> = fields.iter()
         .enumerate()
         .filter(|(_, f)| {
             if let Type::Path(path_type) = &f.ty {
@@ -145,8 +144,8 @@ fn generate_inject_deferred(fields: Vec<&Field>, is_tuple: bool) -> TokenStream2
     };
 }
 
-pub(crate) fn generate_dependencies_create_code(args: Vec<TypeToInject>) -> TokenStream2 {
-    let dep_code_list: Vec<TokenStream2> = args.into_iter()
+pub(crate) fn generate_dependencies_create_code(args: Vec<TypeToInject>) -> TokenStream {
+    let dep_code_list: Vec<TokenStream> = args.into_iter()
         .enumerate()
         .map(|(i, arg)| generate_dependency_create_code(arg, i)).collect();
 
@@ -155,7 +154,7 @@ pub(crate) fn generate_dependencies_create_code(args: Vec<TypeToInject>) -> Toke
     }
 }
 
-fn generate_dependency_create_code(to_inject: TypeToInject, pos: usize) -> TokenStream2 {
+fn generate_dependency_create_code(to_inject: TypeToInject, pos: usize) -> TokenStream {
     let dep_var_name = quote::format_ident!("dep_{}", pos);
     let type_path = to_inject.type_path.clone();
 
@@ -171,15 +170,15 @@ fn generate_dependency_create_code(to_inject: TypeToInject, pos: usize) -> Token
             &to_inject,
             &Ident::new("container", Span::call_site())
         ))
-        .unwrap_or_else(|| quote::quote! { waiter_di::Provider::<#type_path>::create(container) });
+        .unwrap_or_else(|| quote::quote! { ambient::Provider::<#type_path>::create(container) });
 
     quote::quote! {
         let #dep_var_name = #inject_code;
     }
 }
 
-fn generate_deferred_dependencies_code(fields: Vec<&Field>) -> Result<TokenStream2, Error> {
-    let dep_code_list: Vec<TokenStream2> = fields.iter()
+fn generate_deferred_dependencies_code(fields: Vec<&Field>) -> Result<TokenStream, Error> {
+    let dep_code_list: Vec<TokenStream> = fields.iter()
         .enumerate()
         .map(|(i, f)| {
             if let Type::Path(path_type) = &f.ty {

@@ -29,7 +29,7 @@ impl Injector for WrcInjector {
         #[cfg(not(feature = "async"))]
         const RC_SHORT_TYPE: &str = "Rc <";
 
-        let referenced_type_opt = if to_inject.type_name.starts_with("waiter_di :: Wrc <")
+        let referenced_type_opt = if to_inject.type_name.starts_with("ambient :: Wrc <")
             || to_inject.type_name.starts_with(RC_FULL_TYPE) {
             Some(get_type_arg(&to_inject.type_path.segments[2].arguments))
         } else if to_inject.type_name.starts_with("Wrc <") ||
@@ -40,7 +40,7 @@ impl Injector for WrcInjector {
         };
 
         referenced_type_opt.map(|ref_type| quote::quote! {
-            waiter_di::Provider::<#ref_type>::get(#container)
+            ambient::Provider::<#ref_type>::get(#container)
         })
     }
 }
@@ -56,7 +56,7 @@ impl Injector for BoxInjector {
         if to_inject.type_name.starts_with("Box <") {
             let referenced_type = get_type_arg(&to_inject.type_path.segments[0].arguments);
             return Some(quote::quote! {
-                Box::new(waiter_di::Provider::<#referenced_type>::create(#container))
+                Box::new(ambient::Provider::<#referenced_type>::create(#container))
             })
         }
 
@@ -72,7 +72,7 @@ impl Injector for DeferredInjector {
         to_inject: &TypeToInject,
         _container: &Ident
     ) -> Option<TokenStream2> {
-        let referenced_type_opt = if to_inject.type_name.starts_with("waiter_di :: Deferred <") {
+        let referenced_type_opt = if to_inject.type_name.starts_with("ambient :: Deferred <") {
             Some(get_type_arg(&to_inject.type_path.segments[1].arguments))
         } else if to_inject.type_name.starts_with("Deferred <") {
             Some(get_type_arg(&to_inject.type_path.segments[0].arguments))
@@ -81,7 +81,7 @@ impl Injector for DeferredInjector {
         };
 
         referenced_type_opt.map(|ref_type| quote::quote! {
-            waiter_di::Deferred::<#ref_type>::new()
+            ambient::Deferred::<#ref_type>::new()
         })
     }
 }
