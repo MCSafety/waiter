@@ -7,6 +7,7 @@ use regex::Regex;
 use std::env::args;
 use lazy_static::lazy_static;
 use crate::{RcAny, Wrc};
+use once_cell::sync::OnceCell;
 
 pub mod profiles {
     pub struct Default;
@@ -15,16 +16,16 @@ pub mod profiles {
 }
 
 pub trait Component {
-    fn __waiter_create<P>(container: &mut Container<P>) -> Self;
-    fn __waiter_inject_deferred<P>(container: &mut Container<P>, component: &Self);
+    fn __waiter_create<P>(container: &Container<P>) -> Self;
+    fn __waiter_inject_deferred<P>(container: &Container<P>, component: &Self);
 }
 
 pub trait Provider<T: ?Sized> {
     type Impl;
-    fn get(&mut self) -> Wrc<Self::Impl>;
-    fn create(&mut self) -> Self::Impl;
+    fn get(&self) -> Wrc<Self::Impl>;
+    fn create(&self) -> Self::Impl;
 
-    fn get_ref(&mut self) -> &Self::Impl {
+    fn get_ref(&self) -> &Self::Impl {
         // Value under RC is still stored in container, so it can be safely returned as a reference
         // that has the same life as container reference
         unsafe {
@@ -33,7 +34,7 @@ pub trait Provider<T: ?Sized> {
                 .unwrap()
         }
     }
-    fn create_boxed(&mut self) -> Box<Self::Impl> {
+    fn create_boxed(&self) -> Box<Self::Impl> {
         Box::new(Self::create(self))
     }
 }
@@ -41,10 +42,15 @@ pub trait Provider<T: ?Sized> {
 pub struct Container<P> {
     profile: PhantomData<P>,
     pub config: Config,
-    pub components: HashMap<TypeId, RcAny>
+    pub components: std::sync::RwLock<HashMap<TypeId, RcAny>>,
 }
 
 impl<P> Container<P> {
+	pub fn instance() -> &'static Container<APP_PROFILE> {
+		static INSTANCE: OnceCell<Container<APP_PROFILE>> = OnceCell::new();
+		INSTANCE.get_or_init(Container::<APP_PROFILE>::new)
+	}
+
     pub fn new() -> Container<P> {
         let mut config = Config::new();
         config.merge(File::with_name("config/default").required(false))
@@ -65,7 +71,7 @@ impl<P> Container<P> {
         Container {
             config,
             profile: PhantomData::<P>,
-            components: HashMap::new()
+            components: std::sync::RwLock::new(HashMap::new())
         }
     }
 }

@@ -79,11 +79,11 @@ pub(crate) fn generate_component_for_struct(component: ItemStruct) -> Result<Tok
 
     let result = quote::quote! {
         impl #comp_generics ambient::Component for #comp_name #comp_generics {
-            fn __waiter_create<P>(container: &mut ambient::Container<P>) -> Self {
+            fn __waiter_create<P>(container: &ambient::Container<P>) -> Self {
                 #dependencies_code
                 return #comp_name #factory_code;
             }
-            fn __waiter_inject_deferred<P>(container: &mut ambient::Container<P>, component: &Self) {
+            fn __waiter_inject_deferred<P>(container: &ambient::Container<P>, component: &Self) {
                 #deferred_dependencies_code
                 #deferred_inject_code
             }

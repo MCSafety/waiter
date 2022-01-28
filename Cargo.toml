@@ -19,6 +19,8 @@ serde = { version = "1.0.115", features = [ "derive" ] }
 regex = "1.3.9"
 lazy_static = "1.4.0"
 log = "0.4.11"
+once_cell = "1.9"
 
 [features]
+default = [ "async" ]
 async = [ "waiter_codegen/async" ]

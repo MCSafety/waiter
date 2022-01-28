@@ -70,7 +70,7 @@ pub(crate) fn generate_component_provider_impl_fn(
 
     let create_component_code = quote::quote! {
         {
-            let container = &mut *self;
+            let container = self;
             #dependencies_code
             #fn_name_prefix #fn_name #factory_code
         }
@@ -115,24 +115,33 @@ pub fn generate_component_provider_impl(
     let result = quote::quote! {#(
         impl #provider_generics ambient::Provider<#comp_name> for ambient::Container<#profiles> {
             type Impl = #comp_name;
-            fn get(&mut self) -> ambient::Wrc<Self::Impl> {
+            fn get(&self) -> ambient::Wrc<Self::Impl> {
                 let type_id = std::any::TypeId::of::<#comp_name>();
-                if !self.components.contains_key(&type_id) {
-                    let component = ambient::Wrc::new(#create_component_code);
-                    self.components.insert(type_id, component.clone());
-                    #inject_deferred_code
-                }
-                let any = self.components.get(&type_id)
-                    .unwrap();
 
-                return any.clone()
+                if !self.components.read().unwrap().contains_key(&type_id) {
+					// This is outside write lock, because #create_component_code can call get again and would deadlock trying to get a read lock while we are still holding
+					// the write lock. Outside the write lock multiple creations of the component might happen, but only one of the will be inserted. 
+					let component = ambient::Wrc::new(#create_component_code);
+					let mut comps = self.components.write().unwrap();
+					if !comps.contains_key(&type_id) {
+						comps.insert(type_id, component.clone());
+						// #inject_deferred_code can call get again and would deadlock trying to get a read lock while we are still holding the write lock
+						std::mem::drop(comps);
+						#inject_deferred_code
+					}
+                }
+				
+				let comps = self.components.read().unwrap();
+                let any = comps.get(&type_id).unwrap();
+
+                any.clone()
                     .downcast::<#comp_name>()
-                    .unwrap();
+                    .unwrap()
             }
-            fn create(&mut self) -> Self::Impl {
+            fn create(&self) -> Self::Impl {
                 let component = #create_component_code;
                 #inject_deferred_code
-                return component;
+                component
             }
         }
     )*};
@@ -157,10 +166,10 @@ pub(crate) fn generate_interface_provider_impl(provides: ProvidesAttr, impl_bloc
 
     let provider_body = quote::quote! {{
         type Impl = #comp_name;
-        fn get(&mut self) -> ambient::Wrc<Self::Impl> {
+        fn get(&self) -> ambient::Wrc<Self::Impl> {
             ambient::Provider::<#comp_name>::get(self)
         }
-        fn create(&mut self) -> Self::Impl {
+        fn create(&self) -> Self::Impl {
             ambient::Provider::<#comp_name>::create(self)
         }
     }};

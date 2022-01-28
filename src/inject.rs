@@ -4,10 +4,10 @@ macro_rules! inject {
         {
             $(
                 if profile_name::<$profile>().eq(&ambient::APP_PROFILE.as_str()) {
-                    ambient::Provider::<$comp>::create(&mut ambient::Container::<$profile>::new())
+                    ambient::Provider::<$comp>::create(&ambient::Container::<$profile>::new())
                 } else
             )*
-            { ambient::Provider::<$comp>::create(&mut ambient::Container::<ambient::profiles::Default>::new()) }
+            { ambient::Provider::<$comp>::create(&ambient::Container::<ambient::profiles::Default>::new()) }
         }
     }
 }
