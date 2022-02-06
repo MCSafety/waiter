@@ -78,6 +78,7 @@ pub(crate) fn generate_component_for_struct(component: ItemStruct) -> Result<Tok
 
 
     let result = quote::quote! {
+		use ambient::Component;
         impl #comp_generics ambient::Component for #comp_name #comp_generics {
             fn __waiter_create<P>(container: &ambient::Container<P>) -> Self {
                 #dependencies_code
