@@ -84,7 +84,7 @@ lazy_static! {
 fn parse_profile() -> String {
     let mut config = Config::new();
 
-    config.merge(File::with_name("config/default").required(false))
+    config.merge(File::with_name("config/application").required(false))
         .expect("Failed to read default config file");
 
     let profile_arg = args().position(|arg| arg.as_str() == "--profile")
