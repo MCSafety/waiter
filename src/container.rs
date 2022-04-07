@@ -87,15 +87,15 @@ fn parse_profile() -> String {
     config.merge(File::with_name("config/application").required(false))
         .expect("Failed to read default config file");
 
-    let profile_arg = args().position(|arg| arg.as_str() == "--profile")
+    let profile_arg = args().position(|arg| arg.as_str() == "--ambient_profile")
         .and_then(|arg_pos| args().nth(arg_pos + 1));
 
     let parsed_profile = profile_arg
-        .or(env::var("PROFILE").ok())
-        .or(config.get_str("profile").ok())
+        .or(env::var("AMBIENT_PROFILE").ok())
+        .or(config.get_str("ambient_profile").ok())
         .unwrap_or("default".to_string());
 
-    log::info!("Using profile: {}", parsed_profile);
+    // log::info!("Using profile: {}", parsed_profile);
 
     parsed_profile
 }
